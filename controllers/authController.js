@@ -1,5 +1,6 @@
 const User = require('../models/userModel')
 const jwt = require('jsonwebtoken')
+const { promisify } = require('util')
 
 const signToken = (id) => {
 	return jwt.sign({ id: id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })
@@ -39,7 +40,7 @@ exports.login = async (req, res) => {
 
 		// 1. Check that email and password has been provided
 		if (!email || !password) {
-			throw new Error('Please povide email and password')
+			throw new Error('Please provide email and password')
 		}
 
 		// 2. Check if user exist and password is correct
@@ -68,26 +69,41 @@ exports.login = async (req, res) => {
 }
 
 exports.protect = async (req, res, next) => {
-	// 1. getting token
-	let token
 	try {
+		let token
+
+		// 1. getting token
 		if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
 			token = req.headers.authorization.split(' ')[1]
-			console.log(token)
 		}
 
 		if (!token) {
 			throw new Error('User not authenticated')
 		}
 
-		
+		// 2. token verification
+		const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET)
+		console.log('decoded ', decoded)
+
+		// 3. check user exists
+		const currentUser = await User.findById(decoded.id)
+		if (!currentUser) {
+			throw new Error("user doesn't exist")
+		}
+
+		// 4. check user change password after token was issued
+		if (currentUser.changedPasswordAfter(decoded.iat)) {
+			throw new Error('user changed password, token invalid')
+		}
+
+		// access granted
+		req.user = currentUser
+
+		next()
 	} catch (err) {
-
+		res.status(400).json({
+			status: 'failed',
+			error: err.message
+		})
 	}
-	// 2. verification token
-	// 3. check user exist
-	// 4. check user change password after token was issued
-	// grant access
-
-	next()
 }
