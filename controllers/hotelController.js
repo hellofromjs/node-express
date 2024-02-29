@@ -55,7 +55,7 @@ exports.createHotel = async (req, res) => {
 	} catch (err) {
 		res.status(404).json({
 			status: 'failed',
-			message: err,
+			message: err.message,
 		})
 	}
 	// fs.writeFileSync('./data/hotels.json', JSON.stringify(hotels, null, "\t")) 
@@ -63,7 +63,10 @@ exports.createHotel = async (req, res) => {
 
 exports.getHotel = async (req, res) => {
 	try {
-		const hotel = await Hotel.findById(req.params.id)
+		const hotel = await Hotel.findById(req.params.id).populate({
+			path: 'managers',
+			select: '-__v'
+		}).populate('reviews')
 
 		res.status(200).json({
 			status: 'success',
@@ -72,7 +75,7 @@ exports.getHotel = async (req, res) => {
 	} catch (err) {
 		res.status(404).json({
 			status: 'failed',
-			message: err,
+			message: err.message,
 		})
 	}
 }
@@ -94,7 +97,7 @@ exports.updateHotel = async (req, res) => {
 	} catch (err) {
 		res.status(404).json({
 			status: 'failed',
-			message: err,
+			message: err.message,
 		})
 	}
 }
@@ -111,7 +114,7 @@ exports.deleteHotel = async (req, res) => {
 	} catch (err) {
 		res.status(404).json({
 			status: 'failed',
-			message: err,
+			message: err.message,
 		})
 	}
 }
